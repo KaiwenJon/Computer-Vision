@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 class imageAlign():
     def __init__(self, image):
         self.imageB_raw, self.imageG_raw, self.imageR_raw = self.divide_and_padding(image)
-
-        kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-        image_preprocessed = cv2.filter2D(image, ddepth=-1, kernel=kernel)
-        self.imageB, self.imageG, self.imageR = self.divide_and_padding(image_preprocessed)
+        # kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+        # image_preprocessed = cv2.filter2D(image, ddepth=-1, kernel=kernel)
+        # self.imageB, self.imageG, self.imageR = self.divide_and_padding(image_preprocessed)
+        self.imageB, self.imageG, self.imageR = self.divide_and_padding(image)
 
     def divide_and_padding(self, image):
         height, width= image.shape[0:2]
@@ -29,13 +29,13 @@ class imageAlign():
         return imageB, imageG, imageR
 
     def align(self):
-        iG, jG = self.fft_align(self.imageB, self.imageG)
-        print(iG, jG)
+        iG, jG = self.fft_align(self.imageB, self.imageG, channel="G")
+        # print(iG, jG)
         self.alignedG = np.roll(self.imageG_raw,[iG,jG],axis=(0,1))
-        iR, jR = self.fft_align(self.imageB, self.imageR)
-        print(iR, jR)
+        iR, jR = self.fft_align(self.imageB, self.imageR, channel="R")
+        # print(iR, jR)
         self.alignedR = np.roll(self.imageR_raw,[iR,jR],axis=(0,1))
-    def fft_align(self, c1, c2):
+    def fft_align(self, c1, c2, channel):
         height, width = c1.shape
         c1 = c1[round(1*height/10): round(9*height/10), round(1*width/10): round(9*width/10)]
         c2 = c2[round(1*height/10): round(9*height/10), round(1*width/10): round(9*width/10)]
@@ -43,11 +43,6 @@ class imageAlign():
         fft1 = np.fft.fftshift(fft1)
         fft2 = np.fft.fft2(c2)
         fft2 = np.fft.fftshift(fft2)
-        # mag = 20*np.log(abs(self.fftB)).astype(np.uint8)
-        # print(mag)
-        # cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-        # cv2.imshow('image', mag)
-        # cv2.waitKey(0)
         product = fft1 * np.conjugate(fft2)
         product = np.fft.ifftshift(product)
         ifft =  np.fft.ifft2(product)
@@ -60,20 +55,26 @@ class imageAlign():
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)
         cv2.imshow('image', normalizedImg.astype(np.uint8))
         cv2.waitKey(0)
+        if(channel == "G"):
+            cv2.imwrite("./output/raw/00398vG.jpg", normalizedImg)
+        else:
+            cv2.imwrite("./output/raw/00398vR.jpg", normalizedImg)
         return i, j
 
 if __name__ == "__main__":
-    # image = cv2.imread("./data/01112v.jpg")
-    image = cv2.imread("./data_hires/01047u.tif")
+    image = cv2.imread("./data/00398v.jpg")
+    # image = cv2.imread("./data_hires/01657u.tif")
     aligner = imageAlign(np.array(image))
+    start = time.time()
     aligner.align()
+    end = time.time()
     stacked_img = cv2.merge((aligner.imageB_raw, aligner.alignedG, aligner.alignedR))
     height, width = stacked_img.shape[0:2]
     stacked_img = stacked_img[round(height/20):round(19*height/20), round(width/20):round(19*width/20), :]
     # height, width = stacked_img.shape[0:2]
     # stacked_img = stacked_img[round(height/20):round(19*height/20), round(width/20):round(19*width/20), :]
-    print("Done")
+    print("Done", end-start)
     cv2.namedWindow('image', cv2.WINDOW_NORMAL)
     cv2.imshow('image', stacked_img)
     cv2.waitKey(0) 
-    cv2.imwrite("./output/weird_00125v.jpg", stacked_img)
+    # cv2.imwrite("./output/01657u.tif", stacked_img)

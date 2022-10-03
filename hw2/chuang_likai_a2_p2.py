@@ -3,7 +3,9 @@ import numpy as np
 import cv2
 import scipy 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
+from matplotlib.patches import Circle, Ellipse
+import sympy  as sp
+import math
 
 class BlobDetector():
     def __init__(self, image):
@@ -11,9 +13,9 @@ class BlobDetector():
         self.gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         self.gray = self.gray.astype(np.float32)
         self.h, self.w = self.gray.shape
-        cv2.namedWindow('rawimage', cv2.WINDOW_NORMAL)
-        cv2.imshow('rawimage', image)
-        cv2.waitKey(0)
+        # cv2.namedWindow('rawimage', cv2.WINDOW_NORMAL)
+        # cv2.imshow('rawimage', image)
+        # cv2.waitKey(0)
     
     def buildScaleSpaceGaussian(self):
         self.sigmaList = [2]
@@ -44,7 +46,7 @@ class BlobDetector():
                     self.scaleSpace = np.dstack((self.scaleSpace, newScale))
                     self.showNormImage(self.scaleSpace[:, :, -1], sigma)
                 gaussianStack = np.dstack((gaussianStack, g)) 
-                print(gaussianStack[:,:,-1])
+                # print(gaussianStack[:,:,-1])
 
     def buildScaleSpaceDownsample(self):
         self.sigmaList = [0.1, 0.6, 1]
@@ -72,7 +74,7 @@ class BlobDetector():
                 self.scaleSpace = np.dstack((self.scaleSpace, g))
 
     def buildScaleSpace(self):
-        self.sigmaList = [2]
+        self.sigmaList = [0.6, 1]
         for i in range(10):
             self.sigmaList.append(self.sigmaList[-1]*1.5)
         # self.sigmaList = [0.6, 1]
@@ -122,6 +124,53 @@ class BlobDetector():
 
         print("Now drawing circles...")
         self.show_all_circles(self.image, self.cy, self.cx, self.rad)
+        # self.circleToEllipse()
+        # self.show_ellipse()
+
+    def circleToEllipse(self):
+        self.ex = []
+        self.ey = []
+        self.er = []
+        self.eo = []
+        sobelx = cv2.Sobel(self.gray,cv2.CV_64F,1,0,ksize=5)
+        sobely = cv2.Sobel(self.gray,cv2.CV_64F,0,1,ksize=5)
+        for x, y, r in zip(self.cx, self.cy, self.rad):
+            if(x+r >= self.h or y+r >= self.w or x-r <0 or y-r<0):
+                continue
+            r = round(r)
+            Ix = sobelx[x-r : x+r+1, y-r: y+r+1]
+            Iy = sobely[x-r : x+r+1, y-r: y+r+1]
+            size = Ix.shape[0]
+            gk = np.zeros((size, size))
+            gk[size//2][size//2] = 1
+            # gk = cv2.GaussianBlur(gk, ksize=(size, size), sigmaX=Ix.shape[0]/6, sigmaY=Ix.shape[0]/6)
+            # gk = cv2.resize(gk, Ix.shape)
+            # print(gk)
+            M = np.zeros((2, 2))
+            M[0][0] = np.sum(Ix**2)
+            M[0][1] = np.sum(Ix*Iy)
+            M[1][0] = M[0][1]
+            M[1][1] = np.sum(Iy**2)
+            M = sp.Matrix(M)
+            R, D = M.diagonalize()  
+            R = np.array(R)
+            D = np.array(D)
+            lambda1 = D[0][0]
+            lambda2 = D[1][1]
+            scale = 2*r / (lambda1 + lambda2)
+            lambda1 *= scale
+            lambda2 *= scale
+            ratio = lambda1/lambda2
+            if(ratio < 0.1 or ratio > 10):
+                continue
+            self.ex.append(x)
+            self.ey.append(y)
+            self.er.append((lambda1, lambda2))
+            self.eo.append(math.atan2(R[0][0], R[0][1]))
+            # print(r, lambda1, lambda2)
+
+
+                
 
     def showNormImage(self, image, sigma):
         norm = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
@@ -130,6 +179,19 @@ class BlobDetector():
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)
         cv2.imshow('image %3f' % (sigma,), norm)
         cv2.waitKey(0)
+
+    def show_ellipse(self):
+        fig, ax = plt.subplots()
+        ax.set_aspect('equal')
+        ax.imshow(image, cmap='gray')
+        for x, y, r, angle in zip(self.ey, self.ex, self.er, self.eo):
+            angle = angle/math.pi*180
+            # print(x, y, r, angle)
+            ellp = Ellipse((x, y), width=r[0]*2, height=r[1]*2, angle=angle, fill=False, color="red")
+            ax.add_patch(ellp)
+
+        plt.title('%i circles' % len(self.ey))
+        plt.show()
         
     def show_all_circles(self, image, cx, cy, rad, color='r'):
         """
@@ -139,9 +201,9 @@ class BlobDetector():
         """
         fig, ax = plt.subplots()
         ax.set_aspect('equal')
-        ax.imshow(image, cmap='gray')
+        ax.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), cmap='gray')
         for x, y, r in zip(cx, cy, rad):
-            circ = Circle((x, y), r, color=color, fill=False)
+            circ = Circle((x, y), r, color=color, fill=False, linewidth=1.5)
             ax.add_patch(circ)
 
         plt.title('%i circles' % len(cx))
@@ -149,9 +211,9 @@ class BlobDetector():
 
 
 if __name__ == '__main__':
-    image = cv2.imread("./mp2_part2/mp2/part2_images/butterfly.jpg")
+    image = cv2.imread("./output_p2/original/cherry.jpg")
     blobDetector = BlobDetector(image)
-    # blobDetector.buildScaleSpace()
+    blobDetector.buildScaleSpace()
     # blobDetector.buildScaleSpaceDownsample()
-    blobDetector.buildScaleSpaceGaussian()
+    # blobDetector.buildScaleSpaceGaussian()
     blobDetector.nms()
