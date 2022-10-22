@@ -211,7 +211,7 @@ class BlobDetector():
 
 
 if __name__ == '__main__':
-    image = cv2.imread("./output_p2/original/cherry.jpg")
+    image = cv2.imread("./data/butterfly.jpg")
     blobDetector = BlobDetector(image)
     blobDetector.buildScaleSpace()
     # blobDetector.buildScaleSpaceDownsample()
