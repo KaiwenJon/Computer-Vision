@@ -11,6 +11,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from PIL import Image
 from mpl_toolkits.mplot3d import axes3d
 import random
+import time
 
 
 #####################################
@@ -218,10 +219,10 @@ def get_surface(surface_normals, integration_method):
                     height_map[i][j] = 0
                 elif(i == 0):
                     # first row
-                    height_map[i][j] = height_map[i][j-1] + p
+                    height_map[i][j] = height_map[i][j-1] - p
                 else:
                     # Add downwards
-                    height_map[i][j] = height_map[i-1][j] + q
+                    height_map[i][j] = height_map[i-1][j] - q
     elif(integration_method == 'column'):
         # first column first
         for j in range(w):
@@ -232,10 +233,10 @@ def get_surface(surface_normals, integration_method):
                     height_map[i][j] = 0
                 elif(j == 0):
                     # first column
-                    height_map[i][j] = height_map[i-1][j] + q
+                    height_map[i][j] = height_map[i-1][j] - q
                 else:
                     # Add to the right
-                    height_map[i][j] = height_map[i][j-1] + p
+                    height_map[i][j] = height_map[i][j-1] - p
     elif(integration_method == 'average'):
         hmap1 = np.zeros((h, w))
         for i in range(h):
@@ -245,9 +246,9 @@ def get_surface(surface_normals, integration_method):
                 if(i==0 and j==0):
                     hmap1[i][j] = 0
                 elif(i == 0):
-                    hmap1[i][j] = hmap1[i][j-1] + p
+                    hmap1[i][j] = hmap1[i][j-1] - p
                 else:
-                    hmap1[i][j] = hmap1[i-1][j] + q
+                    hmap1[i][j] = hmap1[i-1][j] - q
         hmap2 = np.zeros((h, w))
         for j in range(w):
             for i in range(h):
@@ -256,9 +257,9 @@ def get_surface(surface_normals, integration_method):
                 if(i==0 and j==0):
                     hmap2[i][j] = 0
                 elif(j == 0):
-                    hmap2[i][j] = hmap2[i-1][j] + q
+                    hmap2[i][j] = hmap2[i-1][j] - q
                 else:
-                    hmap2[i][j] = hmap2[i][j-1] + p
+                    hmap2[i][j] = hmap2[i][j-1] - p
         height_map = (hmap1 + hmap2) /2
     elif(integration_method == 'random'):
         n = 5
@@ -283,14 +284,13 @@ def get_surface(surface_normals, integration_method):
                             # go Down
                             x += 1
                             p, q, r = surface_normals[x, y, :] / surface_normals[x, y, 2]
-                            cumsum += q
+                            cumsum -= q
                         elif(move == 1):
                             # go Right
                             y += 1
                             p, q, r = surface_normals[x, y, :] / surface_normals[x, y, 2]
-                            cumsum += p
+                            cumsum -= p
                 height_map[i][j] = cumsum / n
-
     return height_map
 
 
@@ -298,8 +298,8 @@ def get_surface(surface_normals, integration_method):
 # Main function
 if __name__ == '__main__':
     root_path = './croppedyale/croppedyale/'
-    subject_name = 'yaleB01'
-    integration_method = 'random'
+    subject_name = 'yaleB02'
+    integration_method = 'average'
     save_flag = True
 
     full_path = '%s%s' % (root_path, subject_name)
@@ -312,9 +312,10 @@ if __name__ == '__main__':
 
     albedo_image, surface_normals = photometric_stereo(processed_imarray,
                                                     light_dirs)
-
+    start = time.time()
     height_map = get_surface(surface_normals, integration_method)
-
+    end = time.time()
+    print(end-start)
     if save_flag:
         save_outputs(subject_name, albedo_image, surface_normals)
 

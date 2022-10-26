@@ -26,8 +26,8 @@ def plot_inlier_matches(ax, img1, img2, inliers):
     ax.axis('off')
 class Stitching():
     def __init__(self, img1, img2):
-        self.img1 = img1
-        self.img2 = img2
+        self.img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+        self.img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
         self.gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         self.gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
@@ -66,6 +66,7 @@ class Stitching():
         # inlier_thre = 10
         maxInlier = 0
         H_withMaxInlier = []
+        print("Total interest points", len(self.candidates))
         for i in range(iteration):
             inlier_cnt = 0
             total_error = 0
@@ -75,6 +76,8 @@ class Stitching():
                 matches.append(self.candidates[idx, :])
             matches = np.array(matches)
             H = self.getHomography(matches)
+            inliers_tmp = []
+            inliers_error = 0
             for j in range(self.candidates.shape[0]):
                 xL, yL = self.candidates[j][0:2]
                 xR, yR = self.candidates[j][2:4]
@@ -85,11 +88,14 @@ class Stitching():
                 total_error += error
                 if(error < margin_thre):
                     inlier_cnt += 1
-            if(inlier_cnt >= maxInlier):
+                    inliers_error += error
+                    inliers_tmp.append(self.candidates[j])
+            if(inlier_cnt > maxInlier):
                 maxInlier = inlier_cnt
-                print(maxInlier, total_error)
+                print("Number of inliers: ", maxInlier, "\tAverage res error of inliers: ",  inliers_error/maxInlier)
                 H_withMaxInlier = H
-                self.inliers = matches
+                inliers_tmp = np.array(inliers_tmp)
+                self.inliers = inliers_tmp
         
         return H_withMaxInlier
 
@@ -142,10 +148,11 @@ class Stitching():
         merged = np.multiply(overlap == 0, (image1+image2)) + np.multiply(overlap, image1) 
         plt.figure()
         plt.imshow(merged)
-        plt.show()
 
-        # fig, ax = plt.subplots(figsize=(20,10))
-        # plot_inlier_matches(ax, img1, img2, self.inliers)
+        fig, ax = plt.subplots(figsize=(20,10))
+        plot_inlier_matches(ax, self.img1, self.img2, self.inliers)
+
+        plt.show()
 
 
 
