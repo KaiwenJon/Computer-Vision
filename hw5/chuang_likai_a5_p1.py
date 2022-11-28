@@ -47,12 +47,6 @@ for i in range(num_views):
     myB.append([0])
     myB.append([0])
     myB.append([1])
-    # r1 = [a1*a1, 2*a1*a2, 2*a1*a3, a2*a2, 2*a2*a3, a3*a3]
-    # r2 = [a1*a4, 2*a4*a5, 2*a4*a6, a5*a5, 2*a6*a5, a6*a6]
-    # r3 = [a1*a4, a1*a5+a2*a4, a1*a6+a3*a4, a2*a5, a2*a6+a5*a3, a3*a6]
-    # myA.append(r1)
-    # myA.append(r2)
-    # myA.append(r3)
     # myB.append([1])
     # myB.append([1])
     # myB.append([0])
@@ -60,9 +54,13 @@ myA = np.array(myA)
 myB = np.array(myB)
 solution = np.linalg.lstsq(myA, myB)
 QQT = solution[0].reshape((3, 3))
+print("QQT:")
 print(QQT)
 Q = np.linalg.cholesky(QQT)
 # Q = np.eye(3,3)
+print("Q:")
+print(Q)
+print(Q@Q.T)
 new_M = M @ Q
 new_S = np.linalg.inv(Q) @ S
 X = new_S[0, :]
@@ -70,7 +68,7 @@ Y = new_S[1, :]
 Z = new_S[2, :]
 fig = plt.figure()
 ax = plt.axes(projection='3d')
-ax.set_proj_type('persp',focal_length=0.2) 
+# ax.set_proj_type('persp',focal_length=0.2) 
 ax.scatter(X, Y, -Z, c='b', marker='o', alpha=0.6)
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
@@ -87,6 +85,7 @@ for i in range(num_views):
     euc_dist = np.sum((x-proj_x)**2 + (y-proj_y)**2)
     ind.append(i+1)
     res.append(euc_dist)
+    print(euc_dist)
 plt.figure()
 # plt.scatter(x, y, c='b')
 # plt.scatter(proj_x, proj_y, c='r')
@@ -94,7 +93,7 @@ plt.plot(ind, res)
 plt.show()
 
 plt.figure()
-i = 100
+i = 10
 x = measure_M_subCen[i*2, :]
 y = measure_M_subCen[i*2+1, :]
 proj_x = new_M[i*2,:] @ new_S
