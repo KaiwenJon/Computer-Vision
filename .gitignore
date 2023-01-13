@@ -1,5 +1,7 @@
-*.jpg
+
 *.zip
 *.tif
 *.gif
 *__MACOSX
+*.pgm
+*.info
